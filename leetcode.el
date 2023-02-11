@@ -71,16 +71,16 @@
       (leetcode--log-enable-debugging)
       (message "leetcode enable debug"))))
 
-(defun leetcode--install-my-cookie ()
+(defun leetcode--install-browser-cookie3 ()
   "Install leetcode dependencies."
   (let ((async-shell-command-display-buffer t))
     (async-shell-command
-     "pip3 install my_cookies"
+     "pip3 install browser_cookie3"
      (get-buffer-create "*leetcode-install*"))))
 
 (defun leetcode--check-deps ()
   "Check if all dependencies installed."
-  (if (executable-find "my_cookies")
+  (if (string-empty-p (shell-command-to-string "python -c \"import browser_cookie3\""))
       t
     (leetcode--install-my-cookie)
     nil))
@@ -235,8 +235,8 @@ python3, ruby, rust, scala, swift, mysql, mssql, oraclesql.")
 
 ;;; Login
 ;; URL
-(defconst leetcode--domain    "leetcode.com")
-(defconst leetcode--url-base  "https://leetcode.com")
+(defconst leetcode--domain    "leetcode.cn")
+(defconst leetcode--url-base  "https://leetcode.cn")
 (defconst leetcode--url-login (concat leetcode--url-base "/accounts/login"))
 
 ;; Cookie key name
@@ -366,20 +366,14 @@ It also cleans LeetCode cookies in `url-cookie-file'."
   (leetcode--loading-mode t)
   (ignore-errors (url-cookie-delete-cookies leetcode--domain))
   (aio-await (leetcode--csrf-token))    ;knock knock, whisper me the mysterious information
-  (let* ((my-cookies (executable-find "my_cookies"))
-         (my-cookies-output (shell-command-to-string my-cookies))
-         (cookies-list (seq-filter
-                        (lambda (s) (not (string-empty-p s)))
-                        (split-string my-cookies-output "\n")))
-         (cookies-pairs (seq-map
-                         (lambda (s) (split-string s))
-                         cookies-list))
-         (leetcode-session (cadr (assoc leetcode--cookie-session cookies-pairs)))
-         (leetcode-csrftoken (cadr (assoc "csrftoken" cookies-pairs))))
+  (let* ((my-cookies-output (shell-command-to-string "python -c \"import browser_cookie3;list(map(lambda c: print(c.value), filter(lambda c: c.name in ('LEETCODE_SESSION', 'csrftoken'), browser_cookie3.edge(domain_name='leetcode.cn'))))\""))
+         (cookies-list (split-string my-cookies-output "\n"))
+         (leetcode-session (car cookies-list))
+         (leetcode-csrftoken (cadr cookies-list)))
     (leetcode--debug "login session: %s" leetcode-session)
     (leetcode--debug "login csrftoken: %s" leetcode-csrftoken)
     (url-cookie-store leetcode--cookie-session leetcode-session nil leetcode--domain "/" t)
-    (url-cookie-store "csrftoken" leetcode-csrftoken nil leetcode--domain "/" t))
+    (url-cookie-store leetcode--cookie-csrftoken leetcode-csrftoken nil leetcode--domain "/" t))
   (leetcode--loading-mode -1))
 
 (aio-defun leetcode--api-fetch-all-tags ()
@@ -548,7 +542,7 @@ USER-AND-PROBLEMS is an alist comes from
                                  .stat.frontend_question_id .stat.question_id .stat.question__title)
                 (push (make-leetcode-problem
                        :status .status
-                       :id .stat.frontend_question_id
+                       :id .stat.question_id
                        :backend-id .stat.question_id
                        :title .stat.question__title
                        :acceptance (format
@@ -1059,6 +1053,7 @@ will show the detail in other window and jump to it."
                               'action (lambda (btn)
                                         (browse-url (concat (leetcode--problem-link title) "/solution")))
                               'help-echo "Open the problem solution page in browser."))
+        (re-search-backward "Solve it" nil t)
         (rename-buffer buf-name)
         (leetcode--problem-detail-mode)
         (switch-to-buffer (current-buffer))))))
