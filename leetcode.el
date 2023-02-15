@@ -781,8 +781,8 @@ see: https://github.com/skeeto/emacs-aio/issues/3."
 (defun leetcode--buffer-content (buf)
   "Get content without text properties of BUF."
   (with-current-buffer buf
-    (buffer-substring-no-properties
-     (point-min) (point-max))))
+    (string-as-unibyte
+     (encode-coding-string (buffer-string) 'utf-8))))
 
 (defun leetcode--get-slug-title (code-buf)
   "Get slug title before try or submit with CODE-BUF.
