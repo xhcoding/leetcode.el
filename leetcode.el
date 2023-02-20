@@ -638,6 +638,11 @@ Return a list of rows, each row is a vector:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; User Command ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(aio-defun leetcode-login ()
+  "Login."
+  (interactive)
+  (aio-await (leetcode--login)))
+
 (defun leetcode-reset-filter ()
   "Reset filter."
   (interactive)
@@ -1283,7 +1288,8 @@ major mode by `leetcode-prefer-language'and `auto-mode-alist'."
   "This command should be run in LeetCode code buffer.
 It will restore the layout based on current buffer's name."
   (interactive)
-  (let* ((slug-title (file-name-sans-extension (buffer-name)))
+  (let* ((filename (file-name-sans-extension (buffer-name)))
+         (slug-title (substring filename (1+ (string-match-p "_" filename))))
          (problem (leetcode--get-problem slug-title))
          (problem-id (leetcode-problem-id problem))
          (desc-buf (get-buffer (leetcode--detail-buffer-name problem-id)))
